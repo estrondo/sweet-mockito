@@ -8,6 +8,12 @@ import org.mockito.Mock
 
 class SweetMockitoF2[F[_, _], E, A](invocation: => F[E, A]):
 
+  def thenAnswer[B, C](fn: InvocationOnMock => Answer[B, C])(using AnswerF2[F, B, C], B <:< E, C <:< A): this.type =
+    Mockito
+      .when(invocation)
+      .thenAnswer(AnswerF2[F, B, C](fn))
+    this
+
   def thenFail[B](error: => B)(using Effect2[F, B], B <:< E): this.type =
     Mockito
       .when(invocation)

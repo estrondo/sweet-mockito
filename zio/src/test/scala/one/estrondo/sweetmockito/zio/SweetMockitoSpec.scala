@@ -11,6 +11,8 @@ import java.time.ZonedDateTime
 import java.io.IOException
 import zio.IO
 import zio.ZLayer
+import one.estrondo.sweetmockito.Answer
+import org.mockito.ArgumentMatchers
 
 object SweetMockitoSpec extends ZIOSpecDefault:
 
@@ -18,7 +20,7 @@ object SweetMockitoSpec extends ZIOSpecDefault:
 
     def tellMe(a: Int, b: String): Task[String]
 
-    def validate(value: Long): IO[String, Long]
+    def validate(value: Int): IO[String, Long]
 
     def filter(input: String): Task[Option[String]]
 
@@ -83,6 +85,21 @@ object SweetMockitoSpec extends ZIOSpecDefault:
             mock <- ZIO.service[SomeTrait]
             exit <- mock.validate(17).exit
           yield assert(exit)(Assertion.fails(Assertion.equalTo("You again?")))
+        },
+        test("It should mock with a answer.") {
+          for
+            _    <- SweetMockitoLayer[SomeTrait]
+                      .whenF2(_.validate(ArgumentMatchers.any()))
+                      .thenAnswer { invocation =>
+                        if invocation.getArgument[Int](0) == 17 then Answer.failed("Please, stop!")
+                        else Answer.succeed(13L)
+                      }
+            mock <- ZIO.service[SomeTrait]
+            ok   <- mock.validate(13).exit
+            stop <- mock.validate(17).exit
+          yield assert(ok)(Assertion.succeeds(Assertion.equalTo(13L))) && assert(stop)(
+            Assertion.fails(Assertion.equalTo("Please, stop!"))
+          )
         }
       ).provideSomeLayer(ZLayer.succeed(SweetMockito[SomeTrait]))
     )
