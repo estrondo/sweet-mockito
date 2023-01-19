@@ -23,12 +23,27 @@ object AnswerF2:
 
   inline transparent def apply[F[_, _], E, A](using inline answer: AnswerF2[F, E, A]): AnswerF2[F, E, A] = answer
 
-  given [F[_, _], E, A](using effect2: Effect2[F, E]): AnswerF2[F, E, A] = new AnswerF2(effect2)
+  given [F[_, _], E, A](using effect2: Effect2[F, E, A]): AnswerF2[F, E, A] = new AnswerF2(effect2)
 
-class AnswerF2[F[_, _], E, A](effect2: Effect2[F, E]):
+class AnswerF2[F[_, _], E, A](effect2: Effect2[F, E, A]):
 
-  def apply(fn: InvocationOnMock => Answer[E, A]): MockitoAnswer[Any] = new MockitoAnswer:
-    override def answer(invocation: InvocationOnMock): Any =
+  def apply(fn: InvocationOnMock => Answer[E, A]): MockitoAnswer[F[E, A]] = new MockitoAnswer:
+    override def answer(invocation: InvocationOnMock): F[E, A] =
       fn(invocation) match
         case Answer.Succeed(value) => effect2.succeed(value)
         case Answer.Failed(error)  => effect2.failed(error)
+
+object AnswerF:
+
+  inline transparent def apply[F[_], E, A](using inline answer: AnswerF[F, E, A]): AnswerF[F, E, A] = answer
+
+  given [F[_], E, A](using effect: Effect[F, E, A]): AnswerF[F, E, A] = new AnswerF(effect)
+
+class AnswerF[F[_], E, A](effect: Effect[F, E, A]):
+
+  def apply(fn: InvocationOnMock => Answer[E, A]): MockitoAnswer[F[A]] = new MockitoAnswer:
+
+    override def answer(invocation: InvocationOnMock): F[A] =
+      fn(invocation) match
+        case Answer.Succeed(value) => effect.succeed(value)
+        case Answer.Failed(error)  => effect.failed(error)

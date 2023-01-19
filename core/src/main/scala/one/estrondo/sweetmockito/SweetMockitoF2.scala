@@ -8,20 +8,22 @@ import org.mockito.Mock
 
 class SweetMockitoF2[F[_, _], E, A](invocation: => F[E, A]):
 
-  def thenAnswer[B, C](fn: InvocationOnMock => Answer[B, C])(using AnswerF2[F, B, C], B <:< E, C <:< A): this.type =
+  def thenAnswer[E1, A1](
+      fn: InvocationOnMock => Answer[E1, A1]
+  )(using AnswerF2[F, E1, A1], E1 <:< E, A1 <:< A): this.type =
     Mockito
       .when(invocation)
-      .thenAnswer(AnswerF2[F, B, C](fn))
+      .thenAnswer(AnswerF2[F, E1, A1](fn))
     this
 
-  def thenFail[B](error: => B)(using Effect2[F, B], B <:< E): this.type =
+  def thenFail[E1](error: => E1)(using Effect2[F, E1, A], E1 <:< E): this.type =
     Mockito
       .when(invocation)
-      .thenReturn(Effect2[F, B].failed(error))
+      .thenReturn(Effect2[F, E1, A].failed(error))
     this
 
-  def thenReturn[B](value: => B)(using Effect2[F, Nothing], B <:< A): this.type =
+  def thenReturn[A1](value: => A1)(using Effect2[F, Nothing, A1], A1 <:< A): this.type =
     Mockito
       .when(invocation)
-      .thenReturn(Effect2[F, Nothing].succeed(value))
+      .thenReturn(Effect2[F, Nothing, A1].succeed(value))
     this

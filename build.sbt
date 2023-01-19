@@ -17,7 +17,8 @@ lazy val core = (project in file("core"))
     name := "sweet-mockito",
     libraryDependencies ++= Seq(
       "org.mockito"    % "mockito-core" % "5.0.0",
-      "org.scalatest" %% "scalatest-funspec" % "3.2.15" % Test
+      "org.scalatest" %% "scalatest-funspec" % "3.2.15" % Test,
+      "org.scalatest" %% "scalatest-shouldmatchers" % "3.2.15" % Test
     )
   )
 
