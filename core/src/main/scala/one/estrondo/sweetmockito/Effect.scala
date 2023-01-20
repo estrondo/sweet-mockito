@@ -4,7 +4,6 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.Failure
 import scala.collection.Factory
-import scala.collection.IterableFactory
 
 object Effect:
 

@@ -1,7 +1,6 @@
 package one.estrondo.sweetmockito
 
 import scala.collection.Factory
-import scala.collection.IterableFactory
 
 object IterableEffect:
 

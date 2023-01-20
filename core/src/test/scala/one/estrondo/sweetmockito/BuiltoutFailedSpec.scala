@@ -1,12 +1,14 @@
-package one.estrondo.sweetmockito
+package one.estrondo.sweetmockito.outro
 
 import scala.util.Try
 import scala.util.Failure
 import java.io.FileOutputStream
 import org.mockito.ArgumentMatchers
 import scala.util.Success
+import one.estrondo.sweetmockito.SweetMockito
+import one.estrondo.sweetmockito.Answer
 
-class BuiltoutFailedSpec extends Spec:
+class BuiltoutFailedSpec extends one.estrondo.sweetmockito.Spec:
 
   trait Foo:
     def failAsTry(arg: String): Try[String]

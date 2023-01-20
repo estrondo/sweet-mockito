@@ -13,93 +13,102 @@ import zio.IO
 import zio.ZLayer
 import one.estrondo.sweetmockito.Answer
 import org.mockito.ArgumentMatchers
+import zio.test.TestResult
 
 object SweetMockitoSpec extends ZIOSpecDefault:
 
-  trait SomeTrait:
+  case class Message(message: String)
 
-    def tellMe(a: Int, b: String): Task[String]
+  trait Foo:
 
-    def validate(value: Int): IO[String, Long]
+    def tellMe(name: String): Task[Message]
 
-    def filter(input: String): Task[Option[String]]
+    def canIPass(name: String): IO[String, Message]
 
   def spec: Spec[TestEnvironment & Scope, Any] =
     suite("SweetMockito with ZIO")(
       suite("Simple behaviour")(
-        test("It should mock a succeed Task.") {
-          val mock = SweetMockito[SomeTrait]
+        test("It should mock a succeed result.") {
+          val mock = SweetMockito[Foo]
           SweetMockito
-            .whenF2(mock.tellMe(100, "100"))
-            .thenReturn("Woohoo!")
+            .whenF2(mock.tellMe("Einstein"))
+            .thenReturn(Message("You were smart!"))
 
-          for result <- mock.tellMe(100, "100")
-          yield assertTrue(result == "Woohoo!")
+          for result <- mock.tellMe("Einstein")
+          yield assertTrue(result == Message("You were smart!"))
         },
-        test("It should mock a failed Task.") {
-          val mock          = SweetMockito[SomeTrait]
-          val expectedError = IOException("@@@")
+        test("It should mock a failed result.") {
+          val mock          = SweetMockito[Foo]
+          val expectedError = IOException("You? Maybe... look at that bird!")
           SweetMockito
-            .whenF2(mock.tellMe(42, "42"))
+            .whenF2(mock.tellMe("Me"))
             .thenFail(expectedError)
 
-          for exit <- mock.tellMe(42, "42").exit
+          for exit <- mock.tellMe("Me").exit
           yield assert(exit)(Assertion.fails(Assertion.equalTo(expectedError)))
         },
-        test("It should mock an IO.") {
-          val mock          = SweetMockito[SomeTrait]
-          val expectedError = "I hate these numbers: 17, 22!"
+        test("It should mock with dynamic answers.") {
+          val mock          = SweetMockito[Foo]
+          val expectedError = IOException("You're a machine, not a man!")
           SweetMockito
-            .whenF2(mock.validate(22))
-            .thenFail(expectedError)
+            .whenF2(mock.tellMe(ArgumentMatchers.any()))
+            .thenAnswer { invocation =>
+              invocation.getArgument[String](0) match
+                case "Morpheus"    => Answer.succeed(Message("A good leader"))
+                case "Agent Smith" => Answer.failed(expectedError)
+                case value         => Answer.succeed(Message(s"Who are you $value?"))
+            }
 
-          for exit <- mock.validate(22).exit
-          yield assert(exit)(Assertion.fails(Assertion.equalTo(expectedError)))
-        },
-        test("It should mock an Task[Option] with Task[None].") {
-          val mock = SweetMockito[SomeTrait]
-          SweetMockito
-            .whenF2(mock.filter("Mars"))
-            .thenReturn(None)
-
-          for result <- mock.filter("Mars")
-          yield assertTrue(result.isEmpty)
+          for
+            morpheus   <- mock.tellMe("Morpheus").exit
+            agentSmith <- mock.tellMe("Agent Smith").exit
+            neo        <- mock.tellMe("Neo").exit
+          yield TestResult.all(
+            assert(morpheus)(Assertion.succeeds(Assertion.equalTo(Message("A good leader")))),
+            assert(agentSmith)(Assertion.fails(Assertion.equalTo(expectedError))),
+            assert(neo)(Assertion.succeeds(Assertion.equalTo(Message("Who are you Neo?"))))
+          )
         }
       ),
       suite("Simple behaviour with ZLayers")(
         test("It should mock a succeed layer.") {
           for
-            _      <- SweetMockitoLayer[SomeTrait]
-                        .whenF2(_.tellMe(77, "66"))
-                        .thenReturn("Yes!")
-            mock   <- ZIO.service[SomeTrait]
-            result <- mock.tellMe(77, "66")
-          yield assertTrue(result == "Yes!")
+            _      <- SweetMockitoLayer[Foo]
+                        .whenF2(_.canIPass("Michael Jackson"))
+                        .thenReturn(Message("Yes! Please take this money."))
+            mock   <- ZIO.service[Foo]
+            result <- mock.canIPass("Michael Jackson")
+          yield assertTrue(result == Message("Yes! Please take this money."))
 
         },
         test("It should mock a failed layer.") {
           for
-            _    <- SweetMockitoLayer[SomeTrait]
-                      .whenF2(_.validate(17))
-                      .thenFail("You again?")
-            mock <- ZIO.service[SomeTrait]
-            exit <- mock.validate(17).exit
-          yield assert(exit)(Assertion.fails(Assertion.equalTo("You again?")))
+            _    <- SweetMockitoLayer[Foo]
+                      .whenF2(_.canIPass("This is my friend"))
+                      .thenFail("I don't think so, I've never seen him!")
+            mock <- ZIO.service[Foo]
+            exit <- mock.canIPass("This is my friend").exit
+          yield assert(exit)(Assertion.fails(Assertion.equalTo("I don't think so, I've never seen him!")))
         },
-        test("It should mock with a answer.") {
+        test("It should mock a layer with dynamic answers.") {
           for
-            _    <- SweetMockitoLayer[SomeTrait]
-                      .whenF2(_.validate(ArgumentMatchers.any()))
-                      .thenAnswer { invocation =>
-                        if invocation.getArgument[Int](0) == 17 then Answer.failed("Please, stop!")
-                        else Answer.succeed(13L)
-                      }
-            mock <- ZIO.service[SomeTrait]
-            ok   <- mock.validate(13).exit
-            stop <- mock.validate(17).exit
-          yield assert(ok)(Assertion.succeeds(Assertion.equalTo(13L))) && assert(stop)(
-            Assertion.fails(Assertion.equalTo("Please, stop!"))
+            _     <- SweetMockitoLayer[Foo]
+                       .whenF2(_.canIPass(ArgumentMatchers.any()))
+                       .thenAnswer { invocation =>
+                         invocation.getArgument[String](0) match
+                           case "Dr. Spock"   => Answer.succeed(Message("Long live and prosper, please go ahead."))
+                           case "Darth Vader" => Answer.failed("Nooooooo!")
+                           case other         => Answer.failed(s"$other, you're not Spock!")
+                       }
+            mock  <- ZIO.service[Foo]
+            spock <- mock.canIPass("Dr. Spock").exit
+            vader <- mock.canIPass("Darth Vader").exit
+            data  <- mock.canIPass("Data").exit
+          yield TestResult.all(
+            assert(spock)(Assertion.succeeds(Assertion.equalTo(Message("Long live and prosper, please go ahead.")))),
+            assert(vader)(Assertion.fails(Assertion.equalTo("Nooooooo!"))),
+            assert(data)(Assertion.fails(Assertion.equalTo("Data, you're not Spock!")))
           )
         }
-      ).provideSomeLayer(ZLayer.succeed(SweetMockito[SomeTrait]))
+      ).provideSomeLayer(ZLayer.succeed(SweetMockito[Foo]))
     )

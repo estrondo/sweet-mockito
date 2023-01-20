@@ -77,9 +77,6 @@ class BuiltoutSucceedSpec extends Spec:
     }
 
     it("it should work for any collection (for instance scala.collection.Vector)") {
-      val l = List(1, 23, 2)
-      val c = l.toVector
-
       val mock = SweetMockito[Foo]
 
       SweetMockito
