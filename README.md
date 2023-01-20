@@ -16,8 +16,8 @@ The following examples use ZIO, Try, Either and Option as Effect types.
 Add the following dependencies in your sbt build, remember for now **it's available only for Scala 3**.
 
 ```scala
-    "one.estrondo" %% "sweet-mockito" % SweetMockitoVersion % Test,
-    "one.estrondo" %% "sweet-mockito-zio" % SweetMockitoVersion % Test
+    "one.estrondo" %% "sweet-mockito" % <version> % Test,
+    "one.estrondo" %% "sweet-mockito-zio" % <version> % Test
 ```
 
 ## Returning succeed and failed ZIO effects.
